@@ -1,0 +1,19 @@
+{
+  "name": "digmaker",
+  "version": "1.0.0",
+  "description": "AI-powered Mermaid diagram maker using Gemini API",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "express": "^4.18.2",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5"
+  },
+  "keywords": ["mermaid", "diagram", "gemini", "ai"],
+  "author": "",
+  "license": "MIT"
+}

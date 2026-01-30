@@ -21,4 +21,4 @@ Allow: /
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://digmaker.com/sitemap.xml
+Sitemap: https://mermaidflow.com/sitemap.xml

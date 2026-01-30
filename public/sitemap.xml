@@ -6,7 +6,7 @@
 
     <!-- Main page -->
     <url>
-        <loc>https://digmaker.com/</loc>
+        <loc>https://mermaidflow.com/</loc>
         <lastmod>2024-01-21</lastmod>
         <changefreq>weekly</changefreq>
         <priority>1.0</priority>
@@ -14,28 +14,28 @@
 
     <!-- Diagram types (if you create separate pages) -->
     <url>
-        <loc>https://digmaker.com/flowchart-maker</loc>
+        <loc>https://mermaidflow.com/flowchart-maker</loc>
         <lastmod>2024-01-21</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
 
     <url>
-        <loc>https://digmaker.com/sequence-diagram-maker</loc>
+        <loc>https://mermaidflow.com/sequence-diagram-maker</loc>
         <lastmod>2024-01-21</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
 
     <url>
-        <loc>https://digmaker.com/mermaid-editor</loc>
+        <loc>https://mermaidflow.com/mermaid-editor</loc>
         <lastmod>2024-01-21</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
 
     <url>
-        <loc>https://digmaker.com/ai-diagram-generator</loc>
+        <loc>https://mermaidflow.com/ai-diagram-generator</loc>
         <lastmod>2024-01-21</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>

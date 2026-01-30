@@ -1,8 +1,8 @@
-# DigMaker - AI-Powered Mermaid Diagram Generator
+# MermaidFlow - AI-Powered Mermaid Diagram Generator
 
-DigMaker is a web application that uses Google's Gemini AI to help you create, edit, and update Mermaid diagrams through natural language descriptions.
+MermaidFlow is a web application that uses Google's Gemini AI to help you create, edit, and update Mermaid diagrams through natural language descriptions.
 
-![DigMaker](https://img.shields.io/badge/Powered%20by-Gemini%20AI-blue)
+![MermaidFlow](https://img.shields.io/badge/Powered%20by-Gemini%20AI-blue)
 
 ## Features
 

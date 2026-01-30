@@ -1,5 +1,5 @@
 /**
- * DigMaker - AI Diagram Generator
+ * MermaidFlow - AI Diagram Generator
  * Modern UI Controller with enhanced interactions
  * @version 2.0.0
  */
@@ -448,6 +448,10 @@ async function renderDiagram() {
             const padding = 50; // Add 50px padding
             const newViewBox = `${x - padding} ${y - padding} ${w + padding * 2} ${h + padding * 2}`;
             svgElement.setAttribute('viewBox', newViewBox);
+            
+            // Also update width and height attributes if present
+            if (width) svgElement.setAttribute('width', (w + padding * 2) + 'px');
+            if (height) svgElement.setAttribute('height', (h + padding * 2) + 'px');
         }
 
         elements.mermaidOutput.innerHTML = svgElement.outerHTML;
@@ -554,6 +558,32 @@ function exportSVG() {
     // Clone and prepare SVG
     const clonedSvg = svg.cloneNode(true);
     clonedSvg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    
+    // Ensure SVG has proper dimensions and no clipping
+    let viewBox = clonedSvg.getAttribute('viewBox');
+    let width = clonedSvg.getAttribute('width');
+    let height = clonedSvg.getAttribute('height');
+
+    // If no viewBox, create one from width/height
+    if (!viewBox && width && height) {
+        viewBox = `0 0 ${parseFloat(width)} ${parseFloat(height)}`;
+        clonedSvg.setAttribute('viewBox', viewBox);
+    }
+
+    // Ensure SVG has proper sizing for overflow
+    clonedSvg.style.maxWidth = 'none';
+    clonedSvg.style.width = 'auto';
+    clonedSvg.style.height = 'auto';
+    clonedSvg.style.overflow = 'visible';
+
+    // Add padding to prevent clipping
+    const originalViewBox = clonedSvg.getAttribute('viewBox');
+    if (originalViewBox) {
+        const [x, y, w, h] = originalViewBox.split(' ').map(parseFloat);
+        const padding = 50; // Add 50px padding
+        const newViewBox = `${x - padding} ${y - padding} ${w + padding * 2} ${h + padding * 2}`;
+        clonedSvg.setAttribute('viewBox', newViewBox);
+    }
 
     const svgData = new XMLSerializer().serializeToString(clonedSvg);
     const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
@@ -572,21 +602,48 @@ function exportPNG() {
         return;
     }
 
-    const svgData = new XMLSerializer().serializeToString(svg);
+    // Clone SVG to avoid affecting original
+    const clonedSvg = svg.cloneNode(true);
+    
+    // Get SVG dimensions from viewBox or attributes
+    let width, height;
+    const viewBox = clonedSvg.getAttribute('viewBox');
+    
+    if (viewBox) {
+        const [x, y, w, h] = viewBox.split(' ').map(parseFloat);
+        width = w;
+        height = h;
+    } else {
+        width = parseFloat(clonedSvg.getAttribute('width')) || 800;
+        height = parseFloat(clonedSvg.getAttribute('height')) || 600;
+    }
+
+    // Ensure SVG has proper dimensions
+    clonedSvg.setAttribute('width', width);
+    clonedSvg.setAttribute('height', height);
+    
+    // Remove any transform that might affect rendering
+    clonedSvg.removeAttribute('style');
+    clonedSvg.style.maxWidth = 'none';
+    clonedSvg.style.width = 'auto';
+    clonedSvg.style.height = 'auto';
+    clonedSvg.style.overflow = 'visible';
+
+    const svgData = new XMLSerializer().serializeToString(clonedSvg);
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const img = new Image();
 
     img.onload = () => {
         // High resolution export (2x)
-        canvas.width = img.width * 2;
-        canvas.height = img.height * 2;
+        canvas.width = width * 2;
+        canvas.height = height * 2;
 
         // White background
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        // Draw image
+        // Draw image with proper scaling
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         canvas.toBlob(blob => {
@@ -1139,5 +1196,5 @@ setStatus('Ready - Enter a description and click Generate, or use a template');
 // Focus prompt input on load
 elements.promptInput.focus();
 
-console.log('🎨 DigMaker initialized - Ready to create amazing diagrams!');
+console.log('🎨 MermaidFlow initialized - Ready to create amazing diagrams!');
 console.log('💡 Tip: Click on any diagram node to edit it directly!');

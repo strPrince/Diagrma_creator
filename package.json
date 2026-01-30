@@ -1,5 +1,5 @@
 {
-  "name": "digmaker",
+  "name": "mermaidflow",
   "version": "1.0.0",
   "description": "AI-powered Mermaid diagram maker using Gemini API",
   "main": "server.js",

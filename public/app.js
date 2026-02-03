@@ -7,9 +7,8 @@
 // ============================================
 // Mermaid Initialization
 // ============================================
-mermaid.initialize({
+const mermaidBaseConfig = {
     startOnLoad: false,
-    theme: 'default',
     securityLevel: 'loose',
     flowchart: {
         useMaxWidth: false,
@@ -42,7 +41,14 @@ mermaid.initialize({
         useMaxWidth: false,
         diagramPadding: 50
     }
-});
+};
+
+function initializeMermaid(theme) {
+    mermaid.initialize({
+        ...mermaidBaseConfig,
+        theme: theme === 'dark' ? 'dark' : 'default'
+    });
+}
 
 // ============================================
 // DOM Elements Cache
@@ -78,7 +84,8 @@ const elements = {
     fullscreenBtn: document.getElementById('fullscreenBtn'),
     exitFullscreenBtn: document.getElementById('exitFullscreenBtn'),
     exportSvgBtn: document.getElementById('exportSvgBtn'),
-    exportPngBtn: document.getElementById('exportPngBtn')
+    exportPngBtn: document.getElementById('exportPngBtn'),
+    themeToggle: document.getElementById('themeToggle')
 };
 
 // ============================================
@@ -95,6 +102,69 @@ const state = {
     isFullscreen: false,
     renderTimeout: null
 };
+
+// ============================================
+// Theme Management
+// ============================================
+const theme = {
+    storageKey: 'mermaidflow-theme',
+    mediaQuery: window.matchMedia('(prefers-color-scheme: dark)'),
+    current: 'light'
+};
+
+function getStoredTheme() {
+    try {
+        return localStorage.getItem(theme.storageKey);
+    } catch (error) {
+        return null;
+    }
+}
+
+function setStoredTheme(value) {
+    try {
+        localStorage.setItem(theme.storageKey, value);
+    } catch (error) {
+        // Ignore storage errors
+    }
+}
+
+function getPreferredTheme() {
+    const stored = getStoredTheme();
+    if (stored === 'light' || stored === 'dark') {
+        return stored;
+    }
+    return theme.mediaQuery.matches ? 'dark' : 'light';
+}
+
+function updateThemeToggle(themeName) {
+    if (!elements.themeToggle) return;
+    const isDark = themeName === 'dark';
+    const label = isDark ? 'Switch to light theme' : 'Switch to dark theme';
+    elements.themeToggle.setAttribute('aria-label', label);
+    elements.themeToggle.title = label;
+}
+
+function updateThemeColor(themeName) {
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) return;
+    meta.setAttribute('content', themeName === 'dark' ? '#0b1220' : '#0f766e');
+}
+
+function applyTheme(themeName, persist = false) {
+    theme.current = themeName;
+    document.documentElement.setAttribute('data-theme', themeName);
+    updateThemeToggle(themeName);
+    updateThemeColor(themeName);
+    initializeMermaid(themeName);
+
+    if (elements.codeEditor.value.trim()) {
+        renderDiagram();
+    }
+
+    if (persist) {
+        setStoredTheme(themeName);
+    }
+}
 
 // ============================================
 // Diagram Templates
@@ -898,6 +968,12 @@ elements.fullscreenBtn.addEventListener('click', toggleFullscreen);
 elements.exitFullscreenBtn.addEventListener('click', toggleFullscreen);
 elements.exportSvgBtn.addEventListener('click', exportSVG);
 elements.exportPngBtn.addEventListener('click', exportPNG);
+if (elements.themeToggle) {
+    elements.themeToggle.addEventListener('click', () => {
+        const nextTheme = theme.current === 'dark' ? 'light' : 'dark';
+        applyTheme(nextTheme, true);
+    });
+}
 
 // Drag event listeners
 elements.mermaidOutput.addEventListener('mousedown', startDrag);
@@ -1189,6 +1265,15 @@ function setupNodeEditing() {
 
 // Initialize inline editor
 inlineEditor.init();
+
+// Apply initial theme
+applyTheme(getPreferredTheme());
+
+// Sync with system theme changes if no user preference stored
+theme.mediaQuery.addEventListener('change', (e) => {
+    if (getStoredTheme()) return;
+    applyTheme(e.matches ? 'dark' : 'light');
+});
 
 // Set initial status
 setStatus('Ready - Enter a description and click Generate, or use a template');

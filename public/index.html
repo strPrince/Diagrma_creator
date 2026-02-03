@@ -36,8 +36,8 @@
     <meta name="revisit-after" content="7 days">
     <meta name="distribution" content="global">
     <meta name="application-name" content="MermaidFlow">
-    <meta name="theme-color" content="#007bff">
-    <meta name="msapplication-TileColor" content="#007bff">
+    <meta name="theme-color" content="#0f766e">
+    <meta name="msapplication-TileColor" content="#0f766e">
     <meta name="msapplication-config" content="/browserconfig.xml">
 
     <!-- Canonical URL -->
@@ -51,7 +51,7 @@
     <!-- Preconnect for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
@@ -108,6 +108,28 @@
                     <h1>MermaidFlow</h1>
                 </div>
                 <p class="tagline">Free AI Diagram Generator | Mermaid Editor</p>
+                <div class="header-actions">
+                    <button id="themeToggle" class="icon-btn theme-toggle" title="Switch to dark theme" aria-label="Switch to dark theme" type="button">
+                        <span class="theme-icon theme-icon-moon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                            </svg>
+                        </span>
+                        <span class="theme-icon theme-icon-sun" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="5"/>
+                                <line x1="12" y1="1" x2="12" y2="3"/>
+                                <line x1="12" y1="21" x2="12" y2="23"/>
+                                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+                                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+                                <line x1="1" y1="12" x2="3" y2="12"/>
+                                <line x1="21" y1="12" x2="23" y2="12"/>
+                                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+                                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                            </svg>
+                        </span>
+                    </button>
+                </div>
             </header>
 
             <!-- SEO Content Section (Hidden visually but indexed by search engines) -->
@@ -153,28 +175,28 @@
                         <!-- Diagram Type Selector -->
                         <div class="form-group">
                             <label for="diagramType">
-                                <span class="label-icon" aria-hidden="true">📊</span>
+                                <span class="label-icon" aria-hidden="true"></span>
                                 Diagram Type
                             </label>
                             <select id="diagramType" name="diagramType">
-                                <option value="">✨ Auto-detect</option>
-                                <option value="flowchart">📈 Flowchart</option>
-                                <option value="sequence">🔄 Sequence Diagram</option>
-                                <option value="class">🧱 Class Diagram</option>
-                                <option value="state">📍 State Diagram</option>
-                                <option value="er">🔗 ER Diagram</option>
-                                <option value="gantt">📅 Gantt Chart</option>
-                                <option value="pie">🥧 Pie Chart</option>
-                                <option value="mindmap">🧠 Mindmap</option>
-                                <option value="timeline">⏱️ Timeline</option>
-                                <option value="git">🌿 Git Graph</option>
+                                <option value="">Auto-detect</option>
+                                <option value="flowchart">Flowchart</option>
+                                <option value="sequence">Sequence Diagram</option>
+                                <option value="class">Class Diagram</option>
+                                <option value="state">State Diagram</option>
+                                <option value="er">ER Diagram</option>
+                                <option value="gantt">Gantt Chart</option>
+                                <option value="pie">Pie Chart</option>
+                                <option value="mindmap">Mindmap</option>
+                                <option value="timeline">Timeline</option>
+                                <option value="git">Git Graph</option>
                             </select>
                         </div>
 
                         <!-- Prompt Input -->
                         <div class="form-group">
                             <label for="promptInput">
-                                <span class="label-icon" aria-hidden="true">💬</span>
+                                <span class="label-icon" aria-hidden="true"></span>
                                 Describe your diagram
                             </label>
                             <textarea 
@@ -224,22 +246,22 @@
                             </div>
                             <div class="template-buttons" role="list">
                                 <button class="template-btn" data-template="flowchart" type="button" role="listitem">
-                                    📈 Flowchart
+                                    Flowchart
                                 </button>
                                 <button class="template-btn" data-template="sequence" type="button" role="listitem">
-                                    🔄 Sequence
+                                    Sequence
                                 </button>
                                 <button class="template-btn" data-template="class" type="button" role="listitem">
-                                    🧱 Class
+                                    Class
                                 </button>
                                 <button class="template-btn" data-template="state" type="button" role="listitem">
-                                    📍 State
+                                    State
                                 </button>
                                 <button class="template-btn" data-template="er" type="button" role="listitem">
-                                    🔗 ER
+                                    ER
                                 </button>
                                 <button class="template-btn" data-template="gantt" type="button" role="listitem">
-                                    📅 Gantt
+                                    Gantt
                                 </button>
                             </div>
                         </div>
@@ -348,7 +370,7 @@ You can also paste or type your Mermaid code directly."
                     <div class="preview-container" id="previewContainer">
                         <div id="mermaidOutput" class="mermaid-output" role="img" aria-label="Diagram preview area">
                             <div class="placeholder-state">
-                                <div class="placeholder-icon" aria-hidden="true">🎨</div>
+                                <div class="placeholder-icon" aria-hidden="true">Preview</div>
                                 <p>Your diagram will appear here</p>
                                 <span class="placeholder-hint">Generate or paste Mermaid code to see the preview</span>
                             </div>

@@ -79,6 +79,114 @@ async function retryWithBackoff(fn, maxRetries = 5, baseDelay = 3000) {
     }
 }
 
+// ============================================
+// Mermaid Output Quality Helpers
+// ============================================
+
+const MERMAID_STARTERS = [
+    'flowchart',
+    'graph',
+    'sequenceDiagram',
+    'classDiagram',
+    'stateDiagram',
+    'stateDiagram-v2',
+    'erDiagram',
+    'gantt',
+    'pie',
+    'mindmap',
+    'timeline',
+    'gitGraph',
+    'gitgraph'
+];
+
+const DIAGRAM_TYPE_HINTS = {
+    flowchart: 'flowchart TD',
+    sequence: 'sequenceDiagram',
+    class: 'classDiagram',
+    state: 'stateDiagram-v2',
+    er: 'erDiagram',
+    gantt: 'gantt',
+    pie: 'pie',
+    mindmap: 'mindmap',
+    timeline: 'timeline',
+    git: 'gitGraph'
+};
+
+function sanitizeMermaidOutput(text) {
+    if (!text) return '';
+
+    let cleaned = String(text)
+        .replace(/```mermaid\\n?/gi, '')
+        .replace(/```\\n?/g, '')
+        .trim();
+
+    if (!cleaned) return '';
+
+    const lines = cleaned.split(/\\r?\\n/);
+    const startIndex = lines.findIndex((line) => {
+        const trimmed = line.trim();
+        return MERMAID_STARTERS.some((starter) =>
+            trimmed.toLowerCase().startsWith(starter.toLowerCase())
+        );
+    });
+
+    if (startIndex > 0) {
+        cleaned = lines.slice(startIndex).join('\\n').trim();
+    }
+
+    return cleaned;
+}
+
+function isLikelyMermaid(code) {
+    if (!code) return false;
+    const firstLine = code.split(/\\r?\\n/)[0].trim().toLowerCase();
+    return MERMAID_STARTERS.some((starter) => firstLine.startsWith(starter.toLowerCase()));
+}
+
+function expectedStarterForType(diagramType) {
+    if (!diagramType) return null;
+    return DIAGRAM_TYPE_HINTS[diagramType] || null;
+}
+
+async function fixMermaidCode(code, diagramType, contextLabel = 'Fix Mermaid code') {
+    const expectedStarter = expectedStarterForType(diagramType);
+    const starterHint = expectedStarter
+        ? `The first line MUST start with "${expectedStarter}".`
+        : 'The first line MUST start with a valid Mermaid diagram type keyword.';
+
+    const fixPrompt = `You are a Mermaid syntax repair engine.
+${starterHint}
+Return ONLY Mermaid code with no explanations, markdown fences, or extra text.
+If the code is already valid, return it unchanged.
+
+${contextLabel}:
+${code}`;
+
+    const result = await generateWithFallback(fixPrompt);
+    const response = await result.response;
+    const fixed = sanitizeMermaidOutput(response.text());
+    return fixed;
+}
+
+async function ensureValidMermaid(code, diagramType, contextLabel) {
+    let current = sanitizeMermaidOutput(code);
+
+    const expectedStarter = expectedStarterForType(diagramType);
+    const shouldFixStarter =
+        expectedStarter &&
+        (!current || !current.toLowerCase().startsWith(expectedStarter.toLowerCase()));
+
+    if (!current || !isLikelyMermaid(current) || shouldFixStarter) {
+        current = await fixMermaidCode(current || code, diagramType, contextLabel);
+    }
+
+    if (!current || !isLikelyMermaid(current)) {
+        current = await fixMermaidCode(current || code, diagramType, `${contextLabel} (strict retry)`);
+    }
+
+    return sanitizeMermaidOutput(current);
+}
+
 // List available models endpoint
 app.get('/api/models', async (req, res) => {
     try {
@@ -110,9 +218,10 @@ const SYSTEM_PROMPT = `You are an expert Mermaid diagram generator. Your task is
 CRITICAL REQUIREMENTS:
 1. NEVER produce syntax errors - all generated code MUST be 100% syntactically correct and renderable
 2. Return ONLY valid Mermaid syntax code - no markdown fences, explanations, or extra text
-3. Ensure diagrams are clean, readable, well-structured, and visually appealing
-4. Use meaningful labels, proper indentation, and logical flow
-5. Support all Mermaid diagram types: flowchart, sequence, class, state, ER, gantt, pie, mindmap, timeline, gitgraph, etc.
+3. The FIRST line MUST be a valid Mermaid diagram type keyword (e.g., "flowchart TD", "sequenceDiagram", "classDiagram", "stateDiagram-v2", "erDiagram", "gantt", "pie", "mindmap", "timeline", "gitGraph")
+4. Ensure diagrams are clean, readable, well-structured, and visually appealing
+5. Use meaningful labels, proper indentation, and logical flow
+6. Support all Mermaid diagram types: flowchart, sequence, class, state, ER, gantt, pie, mindmap, timeline, gitgraph, etc.
 
 QUALITY GUIDELINES:
 - Use descriptive node names and labels that clearly convey meaning
@@ -160,13 +269,8 @@ app.post('/api/generate', async (req, res) => {
 
         const result = await generateWithFallback(fullPrompt);
         const response = await result.response;
-        let mermaidCode = response.text();
-
-        // Clean up the response - remove markdown fences if present
-        mermaidCode = mermaidCode
-            .replace(/```mermaid\n?/gi, '')
-            .replace(/```\n?/g, '')
-            .trim();
+        let mermaidCode = sanitizeMermaidOutput(response.text());
+        mermaidCode = await ensureValidMermaid(mermaidCode, diagramType, 'Generate Mermaid diagram');
 
         res.json({ 
             success: true, 
@@ -211,13 +315,8 @@ Return the modified Mermaid code only.`;
 
         const result = await generateWithFallback(fullPrompt);
         const response = await result.response;
-        let mermaidCode = response.text();
-
-        // Clean up the response
-        mermaidCode = mermaidCode
-            .replace(/```mermaid\n?/gi, '')
-            .replace(/```\n?/g, '')
-            .trim();
+        let mermaidCode = sanitizeMermaidOutput(response.text());
+        mermaidCode = await ensureValidMermaid(mermaidCode, null, 'Edit Mermaid diagram');
 
         res.json({ 
             success: true, 
@@ -255,12 +354,8 @@ Return ONLY the valid Mermaid code, no explanations.`;
 
         const result = await generateWithFallback(fullPrompt);
         const response = await result.response;
-        let mermaidCode = response.text();
-
-        mermaidCode = mermaidCode
-            .replace(/```mermaid\n?/gi, '')
-            .replace(/```\n?/g, '')
-            .trim();
+        let mermaidCode = sanitizeMermaidOutput(response.text());
+        mermaidCode = await ensureValidMermaid(mermaidCode, null, 'Validate Mermaid diagram');
 
         res.json({ 
             success: true, 

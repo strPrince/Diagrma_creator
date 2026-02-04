@@ -1,24 +1,35 @@
 User-agent: *
+Disallow: /server-status
+Disallow: /server-info
+
+# Allow all other pages for search engines
 Allow: /
 
-# Block access to sensitive files
-Disallow: /api/
-Disallow: /node_modules/
-Disallow: /.env
-Disallow: /server.js
+# Sitemap
+Sitemap: https://mermaidflow.com/sitemap.xml
 
-# Allow all major search engines
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Slurp
-Allow: /
-
-# Crawl delay to be respectful
+# Crawl delay for search engines
 Crawl-delay: 1
 
-# Sitemap location
-Sitemap: https://mermaidflow.com/sitemap.xml
+# Googlebot specific instructions
+User-agent: Googlebot
+Disallow: /server-status
+Disallow: /server-info
+Allow: /
+Crawl-delay: 1
+
+# Bingbot specific instructions
+User-agent: Bingbot
+Disallow: /server-status
+Disallow: /server-info
+Allow: /
+Crawl-delay: 1
+
+# Allow image and video crawling
+User-agent: *
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.gif$
+Allow: /*.svg$
+Allow: /*.webp$

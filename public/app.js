@@ -330,6 +330,65 @@ function showToast(message, type = 'success') {
 }
 
 // ============================================
+// Rate Limit Functions
+// ============================================
+
+/**
+ * Fetch rate limit information
+ */
+async function getRateLimitStatus() {
+    try {
+        const response = await fetch('/api/rate-limit');
+        const data = await response.json();
+        
+        if (data.success) {
+            return {
+                limit: data.limit,
+                used: data.used,
+                remaining: data.remaining,
+                reset: new Date(data.reset)
+            };
+        }
+        
+        console.error('Failed to get rate limit status:', data.error);
+        return null;
+    } catch (error) {
+        console.error('Error fetching rate limit status:', error);
+        return null;
+    }
+}
+
+/**
+ * Update rate limit display
+ */
+function updateRateLimitDisplay(status) {
+    const rateLimitEl = document.getElementById('rateLimitIndicator');
+    if (!rateLimitEl || !status) {
+        return;
+    }
+    
+    // Update the indicator
+    rateLimitEl.innerHTML = `
+        <span class="rate-limit-used">${status.used}</span>
+        <span class="rate-limit-separator">/</span>
+        <span class="rate-limit-limit">${status.limit}</span>
+    `;
+    
+    // Add visual feedback based on remaining requests
+    rateLimitEl.className = 'rate-limit-indicator';
+    if (status.remaining <= 2) {
+        rateLimitEl.classList.add('rate-limit-warning');
+    }
+    if (status.remaining === 0) {
+        rateLimitEl.classList.add('rate-limit-exceeded');
+    }
+    
+    // Update title with reset time
+    const resetTime = status.reset.toLocaleTimeString();
+    rateLimitEl.setAttribute('title', `Resets at ${resetTime}`);
+}
+
+// ============================================
 // API Functions
 // ============================================
 
@@ -366,6 +425,8 @@ async function generateDiagram() {
             setStatus('Diagram generated successfully!', 'success');
             showToast('Diagram generated successfully!');
             await renderDiagram();
+            // Update rate limit display
+            getRateLimitStatus().then(updateRateLimitDisplay);
         } else {
             throw new Error(data.error || 'Failed to generate diagram');
         }
@@ -412,6 +473,8 @@ async function editDiagram() {
             setStatus('Diagram edited successfully!', 'success');
             showToast('Diagram edited successfully!');
             await renderDiagram();
+            // Update rate limit display
+            getRateLimitStatus().then(updateRateLimitDisplay);
         } else {
             throw new Error(data.error || 'Failed to edit diagram');
         }
@@ -424,6 +487,76 @@ async function editDiagram() {
 }
 
 /**
+ * Client-side syntax validation using Mermaid's parser
+ */
+function validateMermaidSyntax(code) {
+    try {
+        // Try to parse the Mermaid code for syntax errors
+        // Mermaid has built-in validation
+        const id = `validate-${Date.now()}`;
+        const result = mermaid.parse(code);
+        return { valid: true, error: null };
+    } catch (error) {
+        return { valid: false, error: error.message };
+    }
+}
+
+/**
+ * Fetch validation rate limit information
+ */
+async function getValidationRateLimitStatus() {
+    try {
+        const response = await fetch('/api/validation-rate-limit');
+        const data = await response.json();
+        
+        if (data.success) {
+            return {
+                limit: data.limit,
+                used: data.used,
+                remaining: data.remaining,
+                reset: new Date(data.reset)
+            };
+        }
+        
+        console.error('Failed to get validation rate limit status:', data.error);
+        return null;
+    } catch (error) {
+        console.error('Error fetching validation rate limit status:', error);
+        return null;
+    }
+}
+
+/**
+ * Update validation rate limit display
+ */
+function updateValidationRateLimitDisplay(status) {
+    const validationRateLimitEl = document.getElementById('validationRateLimitIndicator');
+    if (!validationRateLimitEl || !status) {
+        return;
+    }
+    
+    // Update the indicator
+    validationRateLimitEl.innerHTML = `
+        <span class="rate-limit-used">${status.used}</span>
+        <span class="rate-limit-separator">/</span>
+        <span class="rate-limit-limit">${status.limit}</span>
+    `;
+    
+    // Add visual feedback based on remaining requests
+    validationRateLimitEl.className = 'rate-limit-indicator';
+    if (status.remaining <= 1) {
+        validationRateLimitEl.classList.add('rate-limit-warning');
+    }
+    if (status.remaining === 0) {
+        validationRateLimitEl.classList.add('rate-limit-exceeded');
+    }
+    
+    // Update title with reset time
+    const resetTime = status.reset.toLocaleTimeString();
+    validationRateLimitEl.setAttribute('title', `Resets at ${resetTime}`);
+}
+
+/**
  * Validate and fix diagram code
  */
 async function validateDiagram() {
@@ -431,6 +564,14 @@ async function validateDiagram() {
 
     if (!code) {
         showToast('No diagram code to validate', 'warning');
+        return;
+    }
+
+    // First, check syntax client-side without API call
+    const syntaxResult = validateMermaidSyntax(code);
+    if (syntaxResult.valid) {
+        showToast('Diagram syntax is valid!', 'success');
+        setStatus('Diagram syntax is valid!', 'success');
         return;
     }
 
@@ -451,6 +592,8 @@ async function validateDiagram() {
             setStatus('Diagram validated and fixed!', 'success');
             showToast('Diagram validated successfully!');
             await renderDiagram();
+            // Update validation rate limit display
+            getValidationRateLimitStatus().then(updateValidationRateLimitDisplay);
         } else {
             throw new Error(data.error || 'Failed to validate diagram');
         }
@@ -1274,6 +1417,10 @@ theme.mediaQuery.addEventListener('change', (e) => {
     if (getStoredTheme()) return;
     applyTheme(e.matches ? 'dark' : 'light');
 });
+
+// Load and display rate limit status on page load
+getRateLimitStatus().then(updateRateLimitDisplay);
+getValidationRateLimitStatus().then(updateValidationRateLimitDisplay);
 
 // Set initial status
 setStatus('Ready - Enter a description and click Generate, or use a template');

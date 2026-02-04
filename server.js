@@ -7,6 +7,58 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// SEO-friendly middleware
+app.use((req, res, next) => {
+    res.set('X-Robots-Tag', 'index, follow');
+    res.set('X-Frame-Options', 'SAMEORIGIN');
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
+
+// Rate limiting configuration
+const RATE_LIMIT = 6; // 6 free generations per IP
+const VALIDATION_RATE_LIMIT = 3; // 3 free validations per IP
+const RATE_LIMIT_WINDOW = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+// In-memory store to track IP address usage
+const ipUsage = new Map();
+const validationIpUsage = new Map();
+
+// Rate limiting middleware
+const rateLimiter = (req, res, next) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    
+    // Clean up old entries
+    const now = Date.now();
+    for (const [ip, data] of ipUsage.entries()) {
+        if (now - data.timestamp > RATE_LIMIT_WINDOW) {
+            ipUsage.delete(ip);
+        }
+    }
+    
+    // Check current usage
+    const usage = ipUsage.get(clientIp) || { count: 0, timestamp: now };
+    
+    if (usage.count >= RATE_LIMIT) {
+        return res.status(429).json({ 
+            error: 'Rate limit exceeded', 
+            message: `You have reached the free generation limit of ${RATE_LIMIT} requests per day. Please try again tomorrow.` 
+        });
+    }
+    
+    // Update usage count
+    usage.count += 1;
+    usage.timestamp = now;
+    ipUsage.set(clientIp, usage);
+    
+    // Set response headers
+    res.set('X-RateLimit-Limit', RATE_LIMIT);
+    res.set('X-RateLimit-Remaining', RATE_LIMIT - usage.count);
+    
+    next();
+};
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -187,6 +239,52 @@ async function ensureValidMermaid(code, diagramType, contextLabel) {
     return sanitizeMermaidOutput(current);
 }
 
+// Check rate limit status endpoint
+app.get('/api/rate-limit', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    
+    // Clean up old entries
+    for (const [ip, data] of ipUsage.entries()) {
+        if (now - data.timestamp > RATE_LIMIT_WINDOW) {
+            ipUsage.delete(ip);
+        }
+    }
+    
+    const usage = ipUsage.get(clientIp) || { count: 0, timestamp: now };
+    
+    res.json({
+        success: true,
+        limit: RATE_LIMIT,
+        used: usage.count,
+        remaining: RATE_LIMIT - usage.count,
+        reset: new Date(usage.timestamp + RATE_LIMIT_WINDOW).toISOString()
+    });
+});
+
+// Check validation rate limit status endpoint
+app.get('/api/validation-rate-limit', (req, res) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    const now = Date.now();
+    
+    // Clean up old entries
+    for (const [ip, data] of validationIpUsage.entries()) {
+        if (now - data.timestamp > RATE_LIMIT_WINDOW) {
+            validationIpUsage.delete(ip);
+        }
+    }
+    
+    const usage = validationIpUsage.get(clientIp) || { count: 0, timestamp: now };
+    
+    res.json({
+        success: true,
+        limit: VALIDATION_RATE_LIMIT,
+        used: usage.count,
+        remaining: VALIDATION_RATE_LIMIT - usage.count,
+        reset: new Date(usage.timestamp + RATE_LIMIT_WINDOW).toISOString()
+    });
+});
+
 // List available models endpoint
 app.get('/api/models', async (req, res) => {
     try {
@@ -245,8 +343,8 @@ DIAGRAM TYPE EXAMPLES:
 
 Always prioritize accuracy, clarity, and professional presentation in your output.`;
 
-// Generate diagram endpoint
-app.post('/api/generate', async (req, res) => {
+// Generate diagram endpoint (rate limited)
+app.post('/api/generate', rateLimiter, async (req, res) => {
     try {
         const { prompt, diagramType, existingCode } = req.body;
 
@@ -295,8 +393,8 @@ app.post('/api/generate', async (req, res) => {
     }
 });
 
-// Edit diagram endpoint
-app.post('/api/edit', async (req, res) => {
+// Edit diagram endpoint (rate limited)
+app.post('/api/edit', rateLimiter, async (req, res) => {
     try {
         const { code, instruction } = req.body;
 
@@ -336,8 +434,42 @@ Return the modified Mermaid code only.`;
     }
 });
 
-// Validate Mermaid code endpoint
-app.post('/api/validate', async (req, res) => {
+// Validation rate limiting middleware
+const validationRateLimiter = (req, res, next) => {
+    const clientIp = req.ip || req.connection.remoteAddress;
+    
+    // Clean up old entries
+    const now = Date.now();
+    for (const [ip, data] of validationIpUsage.entries()) {
+        if (now - data.timestamp > RATE_LIMIT_WINDOW) {
+            validationIpUsage.delete(ip);
+        }
+    }
+    
+    // Check current usage
+    const usage = validationIpUsage.get(clientIp) || { count: 0, timestamp: now };
+    
+    if (usage.count >= VALIDATION_RATE_LIMIT) {
+        return res.status(429).json({ 
+            error: 'Validation rate limit exceeded', 
+            message: `You have reached the free validation limit of ${VALIDATION_RATE_LIMIT} requests per day. Please try again tomorrow.` 
+        });
+    }
+    
+    // Update usage count
+    usage.count += 1;
+    usage.timestamp = now;
+    validationIpUsage.set(clientIp, usage);
+    
+    // Set response headers
+    res.set('X-Validation-RateLimit-Limit', VALIDATION_RATE_LIMIT);
+    res.set('X-Validation-RateLimit-Remaining', VALIDATION_RATE_LIMIT - usage.count);
+    
+    next();
+};
+
+// Validate Mermaid code endpoint (separate rate limit)
+app.post('/api/validate', validationRateLimiter, async (req, res) => {
     try {
         const { code } = req.body;
 

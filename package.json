@@ -1,7 +1,7 @@
 {
   "name": "mermaidflow",
   "version": "1.0.0",
-  "description": "AI-powered Mermaid diagram maker using Gemini API",
+  "description": "MermaidFlow - AI Diagram Generator: Free online tool to create Mermaid diagrams from natural language descriptions using Google's Gemini AI. Supports flowcharts, UML diagrams, sequence diagrams, class diagrams, state diagrams, ER diagrams, Gantt charts, mindmaps, and more.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -13,7 +13,34 @@
     "dotenv": "^16.3.1",
     "cors": "^2.8.5"
   },
-  "keywords": ["mermaid", "diagram", "gemini", "ai"],
-  "author": "",
+  "keywords": [
+    "free diagram generator",
+    "free ai diagram generator",
+    "free mermaid diagram generator",
+    "online diagram maker",
+    "mermaid",
+    "diagram",
+    "gemini",
+    "ai",
+    "flowchart",
+    "uml",
+    "sequence",
+    "class",
+    "state",
+    "er",
+    "gantt",
+    "mindmap",
+    "git",
+    "timeline",
+    "generator",
+    "editor",
+    "ai-powered",
+    "free",
+    "online",
+    "no signup diagram tool",
+    "free diagram software",
+    "mermaid editor online"
+  ],
+  "author": "MermaidFlow",
   "license": "MIT"
 }

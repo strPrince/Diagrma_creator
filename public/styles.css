@@ -398,7 +398,7 @@ html[data-theme="dark"] .tagline {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-4);
 }
 
 /* ============================================
@@ -998,6 +998,97 @@ html[data-theme="dark"] .status-bar {
 .status-message.loading::before {
   background: var(--primary-500);
   animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Rate Limit Indicator */
+.rate-limit-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: linear-gradient(135deg, var(--primary-500), var(--primary-600));
+  border: 1px solid var(--primary-400);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--font-bold);
+  color: white;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.3);
+}
+
+.rate-limit-used {
+  color: white;
+  font-weight: var(--font-bold);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.rate-limit-limit {
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: var(--font-semibold);
+}
+
+.rate-limit-separator {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Warning state */
+.rate-limit-warning {
+  background: linear-gradient(135deg, var(--warning-500), var(--warning-600));
+  border-color: var(--warning-400);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.rate-limit-warning .rate-limit-used {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Exceeded state */
+.rate-limit-exceeded {
+  background: linear-gradient(135deg, var(--error-500), var(--error-600));
+  border-color: var(--error-400);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.rate-limit-exceeded .rate-limit-used {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark theme */
+html[data-theme="dark"] .rate-limit-indicator {
+  background: linear-gradient(135deg, var(--primary-600), var(--primary-700));
+  border-color: var(--primary-500);
+  box-shadow: 0 2px 8px rgba(15, 118, 110, 0.4);
+}
+
+html[data-theme="dark"] .rate-limit-limit {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+html[data-theme="dark"] .rate-limit-separator {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+html[data-theme="dark"] .rate-limit-warning {
+  background: linear-gradient(135deg, var(--warning-600), var(--warning-700));
+  border-color: var(--warning-500);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+}
+
+html[data-theme="dark"] .rate-limit-warning .rate-limit-used {
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+html[data-theme="dark"] .rate-limit-exceeded {
+  background: linear-gradient(135deg, var(--error-600), var(--error-700));
+  border-color: var(--error-500);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+}
+
+html[data-theme="dark"] .rate-limit-exceeded .rate-limit-used {
+  color: var(--error-500);
 }
 
 .status-info {

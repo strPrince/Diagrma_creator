@@ -1,44 +1,57 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
-        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
-        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
-
-    <!-- Main page -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://mermaidflow.com/</loc>
-        <lastmod>2024-01-21</lastmod>
-        <changefreq>weekly</changefreq>
+        <lastmod>2024-12-15</lastmod>
+        <changefreq>daily</changefreq>
         <priority>1.0</priority>
     </url>
-
-    <!-- Diagram types (if you create separate pages) -->
     <url>
-        <loc>https://mermaidflow.com/flowchart-maker</loc>
-        <lastmod>2024-01-21</lastmod>
+        <loc>https://mermaidflow.com/about</loc>
+        <lastmod>2024-12-15</lastmod>
         <changefreq>monthly</changefreq>
         <priority>0.8</priority>
     </url>
-
     <url>
-        <loc>https://mermaidflow.com/sequence-diagram-maker</loc>
-        <lastmod>2024-01-21</lastmod>
+        <loc>https://mermaidflow.com/features</loc>
+        <lastmod>2024-12-15</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
+    </url>
+    <url>
+        <loc>https://mermaidflow.com/pricing</loc>
+        <lastmod>2024-12-15</lastmod>
         <changefreq>monthly</changefreq>
+        <priority>0.7</priority>
+    </url>
+    <url>
+        <loc>https://mermaidflow.com/contact</loc>
+        <lastmod>2024-12-15</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>
+    <url>
+        <loc>https://mermaidflow.com/free-ai-diagram-generator</loc>
+        <lastmod>2024-12-15</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://mermaidflow.com/free-mermaid-diagram-generator</loc>
+        <lastmod>2024-12-15</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>https://mermaidflow.com/online-diagram-maker</loc>
+        <lastmod>2024-12-15</lastmod>
+        <changefreq>weekly</changefreq>
         <priority>0.8</priority>
     </url>
-
     <url>
         <loc>https://mermaidflow.com/mermaid-editor</loc>
-        <lastmod>2024-01-21</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
+        <lastmod>2024-12-15</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.9</priority>
     </url>
-
-    <url>
-        <loc>https://mermaidflow.com/ai-diagram-generator</loc>
-        <lastmod>2024-01-21</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-
 </urlset>

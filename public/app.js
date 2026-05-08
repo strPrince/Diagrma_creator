@@ -167,6 +167,45 @@ function applyTheme(themeName, persist = false) {
 }
 
 // ============================================
+// Basic Analytics (sends pageview/event to server)
+// ============================================
+function sendAnalyticsEvent(event, payload = {}) {
+    try {
+        fetch('/api/analytics', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ event, ...payload })
+        }).catch(() => {
+            // Silently ignore network errors for analytics
+        });
+    } catch (err) {
+        // ignore
+    }
+}
+
+// Send initial pageview
+try {
+    sendAnalyticsEvent('pageview', { path: location.pathname, title: document.title, url: location.href, referrer: document.referrer });
+} catch (err) {
+    // ignore
+}
+
+// Try to notify Vercel's view endpoint as a compatible fallback.
+function sendVercelViewPing() {
+    try {
+        // Use keepalive so the browser can send this before unload
+        fetch('/_vercel/insights/view', { method: 'GET', keepalive: true }).catch(() => {});
+    } catch (e) {
+        // ignore
+    }
+}
+
+// Attempt Vercel ping (harmless if not enabled).
+sendVercelViewPing();
+
+// ============================================
 // Diagram Templates
 // ============================================
 const templates = {
@@ -383,9 +422,9 @@ function updateRateLimitDisplay(status) {
         rateLimitEl.classList.add('rate-limit-exceeded');
     }
     
-    // Update title with reset time
+    // Update title with reset time and clear explanation
     const resetTime = status.reset.toLocaleTimeString();
-    rateLimitEl.setAttribute('title', `Resets at ${resetTime}`);
+    rateLimitEl.setAttribute('title', `Free AI generations today (${status.used}/${status.limit}) • Resets at ${resetTime}`);
 }
 
 // ============================================
@@ -551,9 +590,9 @@ function updateValidationRateLimitDisplay(status) {
         validationRateLimitEl.classList.add('rate-limit-exceeded');
     }
     
-    // Update title with reset time
+    // Update title with reset time and clear explanation
     const resetTime = status.reset.toLocaleTimeString();
-    validationRateLimitEl.setAttribute('title', `Resets at ${resetTime}`);
+    validationRateLimitEl.setAttribute('title', `Free validations today (${status.used}/${status.limit}) • Resets at ${resetTime}`);
 }
 
 /**
@@ -658,7 +697,7 @@ async function renderDiagram() {
         const originalViewBox = svgElement.getAttribute('viewBox');
         if (originalViewBox) {
             const [x, y, w, h] = originalViewBox.split(' ').map(parseFloat);
-            const padding = 50; // Add 50px padding
+            const padding = 100; // Increased padding to 100px to ensure no clipping
             const newViewBox = `${x - padding} ${y - padding} ${w + padding * 2} ${h + padding * 2}`;
             svgElement.setAttribute('viewBox', newViewBox);
             
@@ -793,9 +832,13 @@ function exportSVG() {
     const originalViewBox = clonedSvg.getAttribute('viewBox');
     if (originalViewBox) {
         const [x, y, w, h] = originalViewBox.split(' ').map(parseFloat);
-        const padding = 50; // Add 50px padding
+        const padding = 100; // Increased padding to 100px to ensure no clipping
         const newViewBox = `${x - padding} ${y - padding} ${w + padding * 2} ${h + padding * 2}`;
         clonedSvg.setAttribute('viewBox', newViewBox);
+        
+        // Also update width and height attributes if present
+        if (width) clonedSvg.setAttribute('width', (w + padding * 2) + 'px');
+        if (height) clonedSvg.setAttribute('height', (h + padding * 2) + 'px');
     }
 
     const svgData = new XMLSerializer().serializeToString(clonedSvg);
@@ -831,9 +874,23 @@ function exportPNG() {
         height = parseFloat(clonedSvg.getAttribute('height')) || 600;
     }
 
-    // Ensure SVG has proper dimensions
+    // Add padding to prevent clipping
+    const padding = 100; // Increased padding to 100px to ensure no clipping
+    width += padding * 2;
+    height += padding * 2;
+
+    // Ensure SVG has proper dimensions and viewBox
     clonedSvg.setAttribute('width', width);
     clonedSvg.setAttribute('height', height);
+    
+    // Update viewBox to include padding
+    if (viewBox) {
+        const [x, y, w, h] = viewBox.split(' ').map(parseFloat);
+        const newViewBox = `${x - padding} ${y - padding} ${w + padding * 2} ${h + padding * 2}`;
+        clonedSvg.setAttribute('viewBox', newViewBox);
+    } else {
+        clonedSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    }
     
     // Remove any transform that might affect rendering
     clonedSvg.removeAttribute('style');

@@ -5,7 +5,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const path = require('path');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 // SEO-friendly middleware
 app.use((req, res, next) => {
@@ -63,6 +63,50 @@ const rateLimiter = (req, res, next) => {
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
+
+// Simple analytics collector (stores in-memory counts) for basic pageview/event tracking
+const analyticsStore = {
+    pageviews: 0,
+    events: []
+};
+
+// Collect analytics events from the client
+app.post('/api/analytics', (req, res) => {
+    try {
+        const { event = 'pageview', path, title, url, referrer, meta } = req.body || {};
+        const record = {
+            event,
+            path: path || req.path,
+            title: title || document?.title || '',
+            url: url || req.headers.referer || '',
+            referrer: referrer || req.get('Referrer') || req.get('Referer') || '',
+            meta: meta || {},
+            ip: req.ip || req.connection.remoteAddress,
+            ts: new Date().toISOString()
+        };
+
+        if (event === 'pageview') analyticsStore.pageviews += 1;
+        analyticsStore.events.push(record);
+
+        // Keep the store bounded to avoid memory blowup in long-running processes
+        if (analyticsStore.events.length > 5000) analyticsStore.events.shift();
+
+        console.log('Analytics event:', record.event, record.path || record.url);
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Failed to record analytics event', err);
+        res.status(500).json({ success: false });
+    }
+});
+
+// Simple stats endpoint for local verification
+app.get('/api/analytics/stats', (req, res) => {
+    res.json({
+        success: true,
+        pageviews: analyticsStore.pageviews,
+        recent: analyticsStore.events.slice(-20)
+    });
+});
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -132,8 +176,228 @@ async function retryWithBackoff(fn, maxRetries = 5, baseDelay = 3000) {
 }
 
 // ============================================
-// Mermaid Output Quality Helpers
+// Mermaid Documentation RAG Context
 // ============================================
+
+const MERMAID_DOCUMENTATION = `
+# Mermaid Diagram Type Reference Documentation
+
+## Flowcharts
+Syntax: flowchart TD/LR/RL/BT (direction)
+Key Features:
+- Nodes: [Text], (Text), {Text} for different shapes
+- Connections: -->, -- Text -->, ==>, == Text ==>
+- Subgraphs: subgraph title ... end
+- Styling: classDef, class, style
+- Links: click node callback "tooltip"
+- Comments: %% comment
+
+Examples:
+flowchart TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Process]
+    B -->|No| D[End]
+    C --> D
+    
+    classDef start fill:#90EE90,stroke:#333,stroke-width:2px
+    classDef end fill:#FF6B6B,stroke:#333,stroke-width:2px
+    class A start; class D end;
+
+## Sequence Diagrams
+Syntax: sequenceDiagram
+Key Features:
+- Participants: participant, actor
+- Messages: ->>, -->>, -x, --x
+- Activations: activate, deactivate
+- Notes: Note over, Note left of, Note right of
+- Loops: loop condition ... end
+- Alt: alt condition ... else ... end
+- Opt: opt condition ... end
+- Parallel: par ... and ... end
+
+Examples:
+sequenceDiagram
+    participant User as U
+    participant System as S
+    participant Database as DB
+    
+    User->>System: Login Request
+    activate System
+    System->>Database: Query User
+    activate Database
+    Database-->>System: User Data
+    deactivate Database
+    System-->>User: Login Success
+    deactivate System
+
+## Class Diagrams
+Syntax: classDiagram
+Key Features:
+- Classes: class Name { ... }
+- Inheritance: <|--
+- Association: -->
+- Composition: *--
+- Aggregation: o--
+- Multiplicity: 1, 0..1, *
+- Visibility: +public, -private, #protected, ~package
+- Static: {static}
+- Abstract: {abstract}
+- Interfaces: interface Name { ... }
+
+Examples:
+classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound()
+    }
+    class Dog {
+        +String breed
+        +bark()
+    }
+    class Cat {
+        +String color
+        +meow()
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat
+
+## State Diagrams
+Syntax: stateDiagram-v2
+Key Features:
+- States: [*] (initial/final), state name, stateName: inner state
+- Transitions: -->, -->|Event|
+- Composite States: state "State Name" as S ... end
+- Choice Points: []
+- Parallel States: --||--
+- Notes: Note right of, Note left of
+
+Examples:
+stateDiagram-v2
+    [*] --> Idle
+    Idle --> Processing : Start
+    Processing --> Completed : Success
+    Processing --> Failed : Error
+    Completed --> [*]
+    Failed --> Idle : Retry
+
+## ER Diagrams
+Syntax: erDiagram
+Key Features:
+- Entities: ENTITY { ... }
+- Relationships: ||--o{ (1-to-many), }o--|| (many-to-many), ||--|| (1-to-1)
+- Attributes: PK (primary key), FK (foreign key)
+- Types: int, string, float, date, boolean
+
+Examples:
+erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    PRODUCT ||--o{ LINE-ITEM : includes
+    CUSTOMER {
+        int id PK
+        string name
+        string email
+    }
+    ORDER {
+        int id PK
+        date created
+        string status
+    }
+
+## Gantt Charts
+Syntax: gantt
+Key Features:
+- dateFormat: YYYY-MM-DD, HH:mm, etc.
+- title: Chart title
+- section: Section name
+- Tasks: id, start, duration
+- Dependencies: after id
+- Styling: active, done, crit
+
+Examples:
+gantt
+    title Project Timeline
+    dateFormat  YYYY-MM-DD
+    section Planning
+    Research           :a1, 2024-01-01, 7d
+    Design             :a2, after a1, 5d
+    section Development
+    Implementation     :a3, after a2, 14d
+    Testing            :a4, after a3, 7d
+
+## Mindmaps
+Syntax: mindmap
+Key Features:
+- Root: Root node (first line)
+- Levels: indented nodes (2 spaces per level)
+- Styling: :::class
+- Links: Not directly supported
+
+Examples:
+mindmap
+    Root
+        Level 1
+            Level 2
+            Level 2
+                Level 3
+        Level 1
+            Level 2
+
+## Timeline Diagrams
+Syntax: timeline
+Key Features:
+- title: Chart title
+- dateFormat: YYYY-MM-DD
+- sections: Periods with events
+
+Examples:
+timeline
+    title History of Technology
+    section 2020
+    Event 1 : 2020-01-01, 2020-01-15
+    section 2021
+    Event 2 : 2021-03-01, 2021-04-01
+
+## Git Graphs
+Syntax: gitGraph
+Key Features:
+- Commit: commit
+- Branch: branch name
+- Checkout: checkout branch
+- Merge: merge branch
+
+Examples:
+gitGraph
+    commit
+    branch develop
+    checkout develop
+    commit
+    checkout main
+    merge develop
+    commit
+
+## Pie Charts
+Syntax: pie [title]
+Key Features:
+- title: Chart title
+- Data: "Label" : value
+
+Examples:
+pie title Project Time Distribution
+    "Planning" : 20
+    "Development" : 50
+    "Testing" : 20
+    "Documentation" : 10
+
+# General Mermaid Guidelines
+- Use meaningful labels and avoid excessive text
+- Keep diagrams simple and focused
+- Use consistent styling
+- Add comments for complex sections
+- Test diagrams with Mermaid renderer
+- Use subgraphs to organize complex diagrams
+`;
 
 const MERMAID_STARTERS = [
     'flowchart',
@@ -163,6 +427,117 @@ const DIAGRAM_TYPE_HINTS = {
     timeline: 'timeline',
     git: 'gitGraph'
 };
+
+function getDiagramTypeExamples(diagramType) {
+    const examples = {
+        flowchart: `flowchart TD
+    A[Start] --> B{Decision}
+    B -->|Yes| C[Process 1]
+    B -->|No| D[Process 2]
+    C --> E[End]
+    D --> E
+    classDef start fill:#90EE90,stroke:#333,stroke-width:2px
+    classDef end fill:#FF6B6B,stroke:#333,stroke-width:2px
+    class A start; class E end;`,
+        
+        sequence: `sequenceDiagram
+    participant User as U
+    participant System as S
+    participant Database as DB
+    
+    User->>System: Login Request
+    activate System
+    System->>Database: Query User
+    activate Database
+    Database-->>System: User Data
+    deactivate Database
+    System-->>User: Login Success
+    deactivate System`,
+        
+        class: `classDiagram
+    class Animal {
+        +String name
+        +int age
+        +makeSound()
+    }
+    class Dog {
+        +String breed
+        +bark()
+    }
+    class Cat {
+        +String color
+        +meow()
+    }
+    Animal <|-- Dog
+    Animal <|-- Cat`,
+        
+        state: `stateDiagram-v2
+    [*] --> Idle
+    Idle --> Processing : Start
+    Processing --> Completed : Success
+    Processing --> Failed : Error
+    Completed --> [*]
+    Failed --> Idle : Retry`,
+        
+        er: `erDiagram
+    CUSTOMER ||--o{ ORDER : places
+    ORDER ||--|{ LINE-ITEM : contains
+    PRODUCT ||--o{ LINE-ITEM : includes
+    CUSTOMER {
+        int id PK
+        string name
+        string email
+    }
+    ORDER {
+        int id PK
+        date created
+        string status
+    }`,
+        
+        gantt: `gantt
+    title Project Timeline
+    dateFormat  YYYY-MM-DD
+    section Planning
+    Research           :a1, 2024-01-01, 7d
+    Design             :a2, after a1, 5d
+    section Development
+    Implementation     :a3, after a2, 14d
+    Testing            :a4, after a3, 7d`,
+        
+        pie: `pie title Project Time Distribution
+    "Planning" : 20
+    "Development" : 50
+    "Testing" : 20
+    "Documentation" : 10`,
+        
+        mindmap: `mindmap
+    Root
+        Level 1
+            Level 2
+            Level 2
+                Level 3
+        Level 1
+            Level 2`,
+        
+        timeline: `timeline
+    title History of Technology
+    section 2020
+    Event 1 : 2020-01-01, 2020-01-15
+    section 2021
+    Event 2 : 2021-03-01, 2021-04-01`,
+        
+        git: `gitGraph
+    commit
+    branch develop
+    checkout develop
+    commit
+    checkout main
+    merge develop
+    commit`
+    };
+    
+    return examples[diagramType];
+}
 
 function sanitizeMermaidOutput(text) {
     if (!text) return '';
@@ -200,14 +575,126 @@ function expectedStarterForType(diagramType) {
     return DIAGRAM_TYPE_HINTS[diagramType] || null;
 }
 
+// Enhanced Mermaid syntax validation patterns
+const VALIDATION_PATTERNS = {
+    flowchart: {
+        required: ['flowchart'],
+        optional: ['[', ']', '{', '}', '(', ')', '-->', 'classDef', 'subgraph'],
+        forbidden: ['participant', 'classDiagram']
+    },
+    sequence: {
+        required: ['sequenceDiagram'],
+        optional: ['participant', 'actor', '->>', '-->>', 'activate', 'deactivate'],
+        forbidden: ['flowchart', 'classDiagram']
+    },
+    class: {
+        required: ['classDiagram'],
+        optional: ['class', 'interface', '<|--', '-->', '*--', 'o--'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    },
+    state: {
+        required: ['stateDiagram'],
+        optional: ['[*]', '-->|', 'state', 'note'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    },
+    er: {
+        required: ['erDiagram'],
+        optional: ['||--o{', '}o--||', '||--||', 'PK', 'FK'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    },
+    gantt: {
+        required: ['gantt'],
+        optional: ['title', 'dateFormat', 'section', 'after'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    },
+    pie: {
+        required: ['pie'],
+        optional: ['title', ':'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    },
+    mindmap: {
+        required: ['mindmap'],
+        optional: ['Root', 'Level'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    },
+    timeline: {
+        required: ['timeline'],
+        optional: ['title', 'section', 'dateFormat'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    },
+    git: {
+        required: ['gitGraph'],
+        optional: ['commit', 'branch', 'checkout', 'merge'],
+        forbidden: ['flowchart', 'sequenceDiagram']
+    }
+};
+
+function validateMermaidSyntax(code, diagramType) {
+    const errors = [];
+    const lines = code.split(/\\r?\\n/);
+
+    if (!code.trim()) {
+        errors.push('Empty diagram code');
+        return errors;
+    }
+
+    const firstLine = lines[0].trim().toLowerCase();
+    if (!isLikelyMermaid(code)) {
+        errors.push('First line must contain valid Mermaid diagram type');
+    }
+
+    if (diagramType && VALIDATION_PATTERNS[diagramType]) {
+        const patterns = VALIDATION_PATTERNS[diagramType];
+        
+        // Check required patterns
+        patterns.required.forEach(pattern => {
+            if (!code.toLowerCase().includes(pattern.toLowerCase())) {
+                errors.push(`Missing required ${diagramType} diagram syntax: ${pattern}`);
+            }
+        });
+
+        // Check forbidden patterns
+        patterns.forbidden.forEach(pattern => {
+            if (code.toLowerCase().includes(pattern.toLowerCase())) {
+                errors.push(`Forbidden syntax in ${diagramType} diagram: ${pattern}`);
+            }
+        });
+    }
+
+    // Common syntax checks
+    if (code.includes('->') && !code.includes('-->') && !['sequenceDiagram', 'gitGraph'].some(type => code.includes(type))) {
+        errors.push('Use --> for connections instead of ->');
+    }
+
+    // Check for balanced parentheses/braces
+    const parentheses = (code.match(/\(/g) || []).length - (code.match(/\)/g) || []).length;
+    const braces = (code.match(/\{/g) || []).length - (code.match(/\}/g) || []).length;
+    
+    if (parentheses !== 0) {
+        errors.push(`Unbalanced parentheses: ${parentheses > 0 ? 'Missing closing' : 'Missing opening'} )`);
+    }
+    
+    if (braces !== 0) {
+        errors.push(`Unbalanced braces: ${braces > 0 ? 'Missing closing' : 'Missing opening'} }`);
+    }
+
+    return errors;
+}
+
 async function fixMermaidCode(code, diagramType, contextLabel = 'Fix Mermaid code') {
     const expectedStarter = expectedStarterForType(diagramType);
     const starterHint = expectedStarter
         ? `The first line MUST start with "${expectedStarter}".`
         : 'The first line MUST start with a valid Mermaid diagram type keyword.';
 
+    const errors = validateMermaidSyntax(code, diagramType);
+    const errorHint = errors.length > 0 
+        ? `\nDetected errors that need fixing: ${errors.join(', ')}\n` 
+        : '';
+
     const fixPrompt = `You are a Mermaid syntax repair engine.
 ${starterHint}
+${errorHint}
 Return ONLY Mermaid code with no explanations, markdown fences, or extra text.
 If the code is already valid, return it unchanged.
 
@@ -234,6 +721,13 @@ async function ensureValidMermaid(code, diagramType, contextLabel) {
 
     if (!current || !isLikelyMermaid(current)) {
         current = await fixMermaidCode(current || code, diagramType, `${contextLabel} (strict retry)`);
+    }
+
+    // Final validation check
+    const errors = validateMermaidSyntax(current, diagramType);
+    if (errors.length > 0 && diagramType) {
+        console.log(`Validation errors after fix for ${diagramType}:`, errors);
+        current = await fixMermaidCode(current, diagramType, `${contextLabel} (validation fix)`);
     }
 
     return sanitizeMermaidOutput(current);
@@ -310,8 +804,10 @@ app.get('/api/models', async (req, res) => {
     }
 });
 
-// System prompt for Mermaid diagram generation
-const SYSTEM_PROMPT = `You are an expert Mermaid diagram generator. Your task is to generate or modify Mermaid diagram code based on user requests.
+// System prompt for Mermaid diagram generation with RAG context
+const SYSTEM_PROMPT = `You are an expert Mermaid diagram generator with comprehensive knowledge of all Mermaid diagram types and syntax. Your task is to generate or modify Mermaid diagram code based on user requests, using the detailed documentation provided below as your knowledge base.
+
+${MERMAID_DOCUMENTATION}
 
 CRITICAL REQUIREMENTS:
 1. NEVER produce syntax errors - all generated code MUST be 100% syntactically correct and renderable
@@ -328,18 +824,7 @@ QUALITY GUIDELINES:
 - Optimize layout for readability - avoid overly complex or cluttered diagrams
 - Ensure proper connections and relationships between elements
 - Use appropriate diagram types for the content (e.g., don't force a flowchart when a sequence diagram is better)
-
-DIAGRAM TYPE EXAMPLES:
-- Flowchart: flowchart TD or flowchart LR with clear decision points
-- Sequence: sequenceDiagram with proper participant ordering
-- Class: classDiagram with accurate relationships and methods
-- State: stateDiagram-v2 with complete state transitions
-- ER: erDiagram with correct cardinalities and keys
-- Gantt: gantt with realistic timelines and dependencies
-- Pie: pie with meaningful data segments
-- Mindmap: mindmap with hierarchical structure
-- Timeline: timeline with chronological events
-- Gitgraph: gitgraph with proper branching and commits
+- Follow the syntax patterns and examples from the documentation above
 
 Always prioritize accuracy, clarity, and professional presentation in your output.`;
 
@@ -356,6 +841,11 @@ app.post('/api/generate', rateLimiter, async (req, res) => {
         
         if (diagramType) {
             fullPrompt += `Diagram Type: ${diagramType}\n`;
+            // Add diagram type specific examples to prompt
+            const diagramExamples = getDiagramTypeExamples(diagramType);
+            if (diagramExamples) {
+                fullPrompt += `\nExample ${diagramType} diagram:\n${diagramExamples}\n`;
+            }
         }
         
         if (existingCode) {
@@ -365,14 +855,29 @@ app.post('/api/generate', rateLimiter, async (req, res) => {
             fullPrompt += `User Request: ${prompt}`;
         }
 
+        // Add additional guidance for better results
+        fullPrompt += `\n\nIMPORTANT NOTE: 
+- Make sure the generated diagram is syntactically correct and follows standard Mermaid conventions
+- Use meaningful labels and proper structure
+- Keep the diagram focused on the user's request
+- Avoid unnecessary complexity`;
+
         const result = await generateWithFallback(fullPrompt);
         const response = await result.response;
         let mermaidCode = sanitizeMermaidOutput(response.text());
         mermaidCode = await ensureValidMermaid(mermaidCode, diagramType, 'Generate Mermaid diagram');
 
+        // Additional validation and improvement
+        const validationResult = validateMermaidSyntax(mermaidCode, diagramType);
+        if (validationResult.length > 0) {
+            console.log(`Validation issues found, attempting final fix:`, validationResult);
+            mermaidCode = await fixMermaidCode(mermaidCode, diagramType, 'Final validation fix');
+        }
+
         res.json({ 
             success: true, 
-            code: mermaidCode 
+            code: mermaidCode,
+            validation: validationResult.length === 0 ? 'valid' : 'fixed'
         });
 
     } catch (error) {
@@ -477,21 +982,36 @@ app.post('/api/validate', validationRateLimiter, async (req, res) => {
             return res.status(400).json({ error: 'Code is required' });
         }
 
-        const fullPrompt = `Analyze this Mermaid diagram code for syntax errors. If there are errors, fix them and return the corrected code. If the code is valid, return it as-is.
+        // Auto-detect diagram type
+        let detectedType = null;
+        const firstLine = code.split(/\r?\n/)[0].trim().toLowerCase();
+        for (const type in DIAGRAM_TYPE_HINTS) {
+            if (firstLine.includes(type.toLowerCase()) || firstLine.includes(DIAGRAM_TYPE_HINTS[type].toLowerCase())) {
+                detectedType = type;
+                break;
+            }
+        }
 
-Code:
-${code}
+        // Get validation errors
+        const validationErrors = validateMermaidSyntax(code, detectedType);
+        
+        let mermaidCode = sanitizeMermaidOutput(code);
+        
+        // If errors exist, fix them
+        if (validationErrors.length > 0) {
+            console.log('Validation errors found:', validationErrors);
+            mermaidCode = await fixMermaidCode(mermaidCode, detectedType, 'Validation and fix');
+        }
 
-Return ONLY the valid Mermaid code, no explanations.`;
-
-        const result = await generateWithFallback(fullPrompt);
-        const response = await result.response;
-        let mermaidCode = sanitizeMermaidOutput(response.text());
-        mermaidCode = await ensureValidMermaid(mermaidCode, null, 'Validate Mermaid diagram');
+        const finalValidation = validateMermaidSyntax(mermaidCode, detectedType);
 
         res.json({ 
             success: true, 
-            code: mermaidCode 
+            code: mermaidCode,
+            originalErrors: validationErrors,
+            finalErrors: finalValidation,
+            isValid: finalValidation.length === 0,
+            diagramType: detectedType
         });
 
     } catch (error) {

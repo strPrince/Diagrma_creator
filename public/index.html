@@ -154,6 +154,27 @@
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 </head>
 <body>
+        <!-- Vercel Web Analytics loader (will work after enabling Analytics in Vercel and redeploying) -->
+        <script>
+            (function loadVercelAnalytics(){
+                try {
+                    var script = document.createElement('script');
+                    script.async = true;
+                    script.defer = true;
+                    // Primary path added by Vercel when Analytics is enabled
+                    script.src = '/_vercel/insights/script.js';
+                    script.onload = function(){
+                        console.log('Vercel Web Analytics script loaded');
+                    };
+                    script.onerror = function(){
+                        console.warn('Vercel Analytics script not found. Ensure Analytics is enabled in Vercel and redeploy.');
+                    };
+                    document.head.appendChild(script);
+                } catch (e) {
+                    // ignore
+                }
+            })();
+        </script>
     <div class="container">
         <div class="app-wrapper">
             <!-- Header -->
@@ -170,12 +191,12 @@
                 </div>
                 <p class="tagline" role="doc-subtitle">Free AI Diagram Generator | No Signup Required</p>
                 <div class="header-actions" role="navigation" aria-label="Site actions">
-                    <div id="rateLimitIndicator" class="rate-limit-indicator" title="Free generations remaining" role="status" aria-live="polite">
+                    <div id="rateLimitIndicator" class="rate-limit-indicator" title="Free AI generations today (6 per day)" role="status" aria-live="polite">
                         <span class="rate-limit-used">0</span>
                         <span class="rate-limit-separator">/</span>
                         <span class="rate-limit-limit">6</span>
                     </div>
-                    <div id="validationRateLimitIndicator" class="rate-limit-indicator" title="Free validations remaining" role="status" aria-live="polite">
+                    <div id="validationRateLimitIndicator" class="rate-limit-indicator" title="Free validations today (3 per day)" role="status" aria-live="polite">
                         <span class="rate-limit-used">0</span>
                         <span class="rate-limit-separator">/</span>
                         <span class="rate-limit-limit">3</span>
